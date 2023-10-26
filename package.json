@@ -7,6 +7,12 @@
     "eslint": "^8.52.0",
     "eslint-plugin-import": "^2.29.0",
     "eslint-plugin-react": "^7.33.2",
-    "husky": "^8.0.3"
+    "husky": "^8.0.3",
+    "lint-staged": "^15.0.2"
+  },
+  "lint-staged": {
+    "src/**/*.{js,jsx,ts,tsx,json,css,scss,md}": [
+      "eslint"
+    ]
   }
 }
