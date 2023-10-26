@@ -7,7 +7,7 @@
     "babel-eslint": "^10.1.0",
     "eslint": "^8.52.0",
     "eslint-plugin-import": "^2.29.0",
-    "eslint-plugin-react": "^7.33.2"
-  },
-  "pre-commit": ["lint"]  
+    "eslint-plugin-react": "^7.33.2",
+    "pre-commit": "^1.2.2"
+  }
 }
