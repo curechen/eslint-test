@@ -94,7 +94,7 @@ function handleEslintConfFile() {
     if (!configFile) {
         const depend = extendList[args?.[0]?.slice(1)[0]] || extendList.base;
         const config = {
-            extends: [depend, "plugin:diff/diff"],
+            extends: [depend, "plugin:diff/diff"]
         };
         packageJson.devDependencies[depend] = 'latest';
 
