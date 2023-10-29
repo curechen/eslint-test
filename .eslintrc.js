@@ -7,7 +7,7 @@ module.exports = {
         // 'error'|2: 当你的语句没有分号结束时，则会报错提示，编译程序会退出
         // 'warn'|1: 当你的语句没有分号结束时，则会告警提示，不会导致程序退出
         // 'off'|0: 关闭这条规则
-        semi: 'error',
+        // semi: 'error',
     },
     // extends: ['@qnpm/eslint-config-qunar-base'],
 };
