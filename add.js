@@ -8,6 +8,18 @@ const args = process.argv.slice(2);
 const packageJsonPath = './package.json';
 const packageJson = require(packageJsonPath);
 
+const defaultEslintIgnoreConfig = `
+node_modules
+coverage
+prd
+dev
+dist
+build
+packages/*/lib
+.eslintrc.js
+add.js
+`
+
 packageJson.devDependencies = packageJson.devDependencies || {};
 
 handlePreCommitDependency();
@@ -54,8 +66,8 @@ function handlePreCommitDependency() {
             '*.{js,jsx}': ['eslint'],
         };
 
-        // 判断有没有eslint配置文件
         handleEslintConfFile();
+        handleEslintIgnoreFile();
 
         // 写回 package.json 文件
         fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
@@ -83,6 +95,9 @@ function handlePreCommitDependency() {
     }
 }
 
+/**
+ * 判断当前根目录中是否存在 eslint 相关配置文件，不存在则创建
+ */
 function handleEslintConfFile() {
     const configFile = hasESLintConfigFile();
     const extendList = {
@@ -93,9 +108,7 @@ function handleEslintConfFile() {
     };
     if (!configFile) {
         const depend = extendList[args?.[0]?.slice(1)[0]] || extendList.base;
-        const config = {
-            extends: [depend, "plugin:diff/diff"]
-        };
+        const config = { extends: [depend, 'plugin:diff/diff'] };
         packageJson.devDependencies[depend] = 'latest';
 
         // 将配置对象转换为字符串
@@ -116,6 +129,7 @@ function handleEslintConfFile() {
         }
     }
 }
+
 function hasESLintConfigFile() {
     const filePaths = ['.eslintrc.js', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml'];
     let configFile = '';
@@ -133,4 +147,20 @@ function hasESLintConfigFile() {
     }
 
     return configFile;
+}
+
+
+/**
+ * 判断当前根目录中是否存在 eslintIgnore 文件，不存在则创建
+ */
+function handleEslintIgnoreFile() {
+    const currentDirectory = process.cwd();
+    const eslintIgnorePath = path.join(currentDirectory, '.eslintignore');
+
+    if (!fs.existsSync(eslintIgnorePath)) {
+        fs.writeFileSync(eslintIgnorePath, defaultEslintIgnoreConfig);
+        console.log('.eslintignore 文件创建成功');
+    } else {
+        console.log('.eslintignore 文件已存在');
+    }
 }

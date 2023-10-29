@@ -1,22 +1,5 @@
 {
   "scripts": {
-    "lint": "eslint . --ext .js --ext .jsx",
-    "prepare": "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'"
-  },
-  "devDependencies": {
-    "husky": "^8.0.3",
-    "lint-staged": "^15.0.2",
-    "eslint-plugin-diff": "^2.0.2",
-    "@qnpm/eslint-config-qunar-base": "latest"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
-  },
-  "lint-staged": {
-    "*.{js,jsx}": [
-      "eslint"
-    ]
+    "lint": "eslint . --ext .js --ext .jsx"
   }
 }
