@@ -5,8 +5,7 @@
   },
   "devDependencies": {
     "husky": "^8.0.3",
-    "lint-staged": "^15.0.2",
-    "@qnpm/eslint-config-qunar-base": "latest"
+    "lint-staged": "^15.0.2"
   },
   "husky": {
     "hooks": {
