@@ -41,6 +41,8 @@ function handlePreCommitDependency() {
         }
         if (!hasLintStaged) packageJson.devDependencies['lint-staged'] = '^15.0.2';
 
+        packageJson.devDependencies['eslint-plugin-diff'] = '^2.0.2';
+
         // 添加 husky 和 lint-staged 配置
         packageJson.husky = {
             hooks: {
@@ -92,7 +94,7 @@ function handleEslintConfFile() {
     if (!configFile) {
         const depend = extendList[args?.[0]?.slice(1)[0]] || extendList.base;
         const config = {
-            extends: [depend],
+            extends: [depend, "plugin:diff/diff"],
         };
         packageJson.devDependencies[depend] = 'latest';
 
