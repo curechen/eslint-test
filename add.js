@@ -18,7 +18,7 @@ build
 packages/*/lib
 .eslintrc.js
 add.js
-`
+`;
 
 packageJson.devDependencies = packageJson.devDependencies || {};
 
@@ -45,13 +45,13 @@ function handlePreCommitDependency() {
 
         // 只有当两者都没有的时候再去安装 husky，否则就默认是使用项目中原先的依赖
         if (!hasHusky && !hasPreCommit) {
-            packageJson.devDependencies.husky = '^8.0.3';
+            packageJson.devDependencies.husky = '^3.0.5';
             // 有则替换 prepare 命令，无则添加
             // prepare 钩子会在 npm install 前执行
             packageJson.scripts = packageJson.scripts || {};
-            packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
+            // packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
         }
-        if (!hasLintStaged) packageJson.devDependencies['lint-staged'] = '^15.0.2';
+        if (!hasLintStaged) packageJson.devDependencies['lint-staged'] = '^9.2.5';
 
         packageJson.devDependencies['eslint-plugin-diff'] = '^2.0.2';
 
@@ -63,7 +63,7 @@ function handlePreCommitDependency() {
         };
 
         packageJson['lint-staged'] = {
-            '*.{js,jsx}': ['eslint'],
+            'src/**/*.{js,jsx}': ['eslint'],
         };
 
         handleEslintConfFile();
@@ -79,7 +79,7 @@ function handlePreCommitDependency() {
         // }
 
         // 输出加载信息
-        console.log('正在执行 npm install，请稍候...');
+        console.log('正在执行 npm install 安装依赖，请稍候...');
         // 执行 npm install 来安装新的依赖
         exec('npm install', (error, stdout, stderr) => {
             if (error) {
@@ -148,7 +148,6 @@ function hasESLintConfigFile() {
 
     return configFile;
 }
-
 
 /**
  * 判断当前根目录中是否存在 eslintIgnore 文件，不存在则创建

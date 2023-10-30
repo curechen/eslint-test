@@ -1,0 +1,10 @@
+
+node_modules
+coverage
+prd
+dev
+dist
+build
+packages/*/lib
+.eslintrc.js
+add.js
