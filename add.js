@@ -86,7 +86,7 @@ function handlePreCommitDependency() {
         packageJson['lint-staged'] = {
             // 'src/**/*.{js,jsx}': ['eslint'],
             // 'source/**/*.{js,jsx}': ['eslint'],
-            '*.{js,jsx}': ['eslint'],
+            '*.{js,jsx}': ['eslint --fix'],
         };
 
         packageJsonChanged = true;
