@@ -41,7 +41,7 @@ function handlePreCommitDependency() {
     // 项目中只要缺少其中一种依赖则在 package.json 中添加配置并安装，husky 和 pre-commit 作用一致，不同项目使用的不同所以在这里是二选一
     if (!hasEslint || (!hasHusky && !hasPreCommit) || !hasLintStaged) {
         // 添加 eslint、husky 和 lint-staged 依赖
-        // if (!hasEslint) packageJson.devDependencies.eslint = '^8.52.0';
+        // if (!hasEslint) packageJson.devDependencies.eslint = '^5.16.0';
 
         // 只有当两者都没有的时候再去安装 husky，否则就默认是使用项目中原先的依赖
         if (!hasHusky && !hasPreCommit) {
@@ -49,17 +49,17 @@ function handlePreCommitDependency() {
             // 有则替换 prepare 命令，无则添加
             // prepare 钩子会在 npm install 前执行
             packageJson.scripts = packageJson.scripts || {};
-            // packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
+            packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
         }
         if (!hasLintStaged) packageJson.devDependencies['lint-staged'] = '^9.2.5';
 
-        packageJson.devDependencies['eslint-plugin-diff'] = '^2.0.2';
+        // packageJson.devDependencies['eslint-plugin-diff'] = '^2.0.2';
+        packageJson.devDependencies['eslint-plugin-diff'] = '1.0.15';
 
         // 添加 husky 和 lint-staged 配置
         packageJson.husky = {
             hooks: {
-                // 'pre-commit': 'lint-staged',
-                'pre-commit': 'npx lint-staged',
+                'pre-commit': 'lint-staged',
             },
         };
 
@@ -109,7 +109,8 @@ function handleEslintConfFile() {
         rn: 'eslint-config-qunar-rn',
     };
     if (!configFile) {
-        const depend = extendList[args?.[0]?.slice(1)[0]] || extendList.base;
+        let type = args && args[0] && args[0].slice(1);
+        const depend = type && extendList[type] || extendList.base;
         const config = { extends: [depend, 'plugin:diff/diff'] };
         packageJson.devDependencies[depend] = 'latest';
 
