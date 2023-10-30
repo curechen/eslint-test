@@ -49,18 +49,18 @@ function handlePreCommitDependency() {
             // 有则替换 prepare 命令，无则添加
             // prepare 钩子会在 npm install 前执行
             packageJson.scripts = packageJson.scripts || {};
-            packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
+            // packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
         }
         if (!hasLintStaged) packageJson.devDependencies['lint-staged'] = '^9.2.5';
 
         packageJson.devDependencies['eslint-plugin-diff'] = '^2.0.2';
 
         // 添加 husky 和 lint-staged 配置
-        // packageJson.husky = {
-        //     hooks: {
-        //         'pre-commit': 'lint-staged',
-        //     },
-        // };
+        packageJson.husky = {
+            hooks: {
+                'pre-commit': 'lint-staged',
+            },
+        };
 
         packageJson['lint-staged'] = {
             'src/**/*.{js,jsx}': ['eslint'],
