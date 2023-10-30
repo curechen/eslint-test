@@ -4,4 +4,3 @@ console.log('eslint4');
 console.log('eslint4')
 console.log('eslint5')
 console.log('eslint522222');
-console.log('eslint522')
