@@ -58,12 +58,14 @@ function handlePreCommitDependency() {
         // 添加 husky 和 lint-staged 配置
         packageJson.husky = {
             hooks: {
-                'pre-commit': 'lint-staged',
+                // 'pre-commit': 'lint-staged',
+                'pre-commit': 'npx lint-staged',
             },
         };
 
         packageJson['lint-staged'] = {
-            'src/**/*.{js,jsx}': ['eslint'],
+            // 'src/**/*.{js,jsx}': ['eslint'],
+            '*.{js,jsx}': ['eslint'],
         };
 
         handleEslintConfFile();
