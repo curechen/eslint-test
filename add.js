@@ -65,7 +65,8 @@ function handlePreCommitDependency() {
 
         // 只有当两者都没有的时候再去安装 husky，否则就默认是使用项目中原先的依赖
         if (!hasHusky && !hasPreCommit) {
-            packageJson.devDependencies.husky = '^3.0.5';
+            // packageJson.devDependencies.husky = '^3.0.5';
+            packageJson.devDependencies.husky = '4.3.8';
             // 有则替换 prepare 命令，无则添加
             // prepare 钩子会在 npm install 前执行
             packageJson.scripts = packageJson.scripts || {};
