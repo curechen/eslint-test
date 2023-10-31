@@ -29,22 +29,20 @@ handlePreCommitDependency();
 handleEslintConfFile();
 handleEslintIgnoreFile();
 
-if (packageJsonChanged) {
-    // 写回 package.json 文件
-    fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
-    // 输出加载信息
-    console.log('正在执行 npm install 安装依赖，请稍候...');
-    // 执行 npm install 来安装新的依赖
-    exec('npm install', (error) => {
-        if (error) {
-            console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
-            // console.error('\x1b[31mError executing npm install: ' + error + '\x1b[0m');
-        } else {
-            console.log('执行 npm install 下载依赖完成');
-            console.log('成功在 package.json 中添加 eslint，husky，lint-staged 相关依赖！');
-        }
-    });
-}
+packageJsonChanged && fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
+
+// 输出加载信息
+console.log('正在执行 npm install 安装依赖，请稍候...');
+// 执行 npm install 来安装新的依赖
+exec('npm install', (error) => {
+    if (error) {
+        console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
+    } else {
+        console.log('执行 npm install 下载依赖完成');
+        packageJsonChanged && console.log('成功在 package.json 中添加 eslint，husky，lint-staged 相关依赖！');
+        !packageJsonChanged && console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖！');
+    }
+});
 
 /**
  * 提交前检测需要依赖 husky/pre-commit + lint-staged，该函数目的就是为了判断当前项目中是否存在这些依赖，不存在则添加
@@ -71,7 +69,7 @@ function handlePreCommitDependency() {
             // 有则替换 prepare 命令，无则添加
             // prepare 钩子会在 npm install 前执行
             packageJson.scripts = packageJson.scripts || {};
-            packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
+            // packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
         }
         if (!hasLintStaged) packageJson.devDependencies['lint-staged'] = '^9.2.5';
 
@@ -79,11 +77,11 @@ function handlePreCommitDependency() {
         packageJson.devDependencies['eslint-plugin-diff'] = '1.0.15';
 
         // 添加 husky 和 lint-staged 配置
-        // packageJson.husky = {
-        //     hooks: {
-        //         'pre-commit': 'lint-staged',
-        //     },
-        // };
+        packageJson.husky = {
+            hooks: {
+                'pre-commit': 'lint-staged',
+            },
+        };
 
         packageJson['lint-staged'] = {
             // 'src/**/*.{js,jsx}': ['eslint'],
@@ -120,10 +118,10 @@ function handleEslintConfFile() {
 
         const extendRules = [];
 
-        if ('react' in dependencies) {
+        if ('react' in packageJson.dependencies) {
             extendRules.push(extendList.react);
         }
-        if ('qunar-react-native' in dependencies) {
+        if ('qunar-react-native' in packageJson.dependencies) {
             extendRules.push(extendList.rn);
         }
 
@@ -137,7 +135,8 @@ function handleEslintConfFile() {
 
         // const config = { extends: [depend, 'plugin:diff/diff'] };
         const config = { extends: [...extendRules, 'plugin:diff/diff'] };
-        packageJson.devDependencies[depend] = 'latest';
+        extendRules.forEach(rule => packageJson.devDependencies[rule] = 'latest');
+        // packageJson.devDependencies[depend] = 'latest';
 
         packageJsonChanged = true;
         // 将配置对象转换为字符串
