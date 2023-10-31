@@ -22,6 +22,7 @@ add.js
 
 let packageJsonChanged = false;
 
+packageJson.dependencies = packageJson.dependencies || {};
 packageJson.devDependencies = packageJson.devDependencies || {};
 
 handlePreCommitDependency();
@@ -36,7 +37,8 @@ if (packageJsonChanged) {
     // 执行 npm install 来安装新的依赖
     exec('npm install', (error) => {
         if (error) {
-            console.error(`Error executing npm install: ${error}`);
+            console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
+            // console.error('\x1b[31mError executing npm install: ' + error + '\x1b[0m');
         } else {
             console.log('执行 npm install 下载依赖完成');
             console.log('成功在 package.json 中添加 eslint，husky，lint-staged 相关依赖！');
@@ -86,7 +88,7 @@ function handlePreCommitDependency() {
         packageJson['lint-staged'] = {
             // 'src/**/*.{js,jsx}': ['eslint'],
             // 'source/**/*.{js,jsx}': ['eslint'],
-            '*.{js,jsx}': ['eslint --fix'],
+            '*.{js,jsx}': ['eslint'],
         };
 
         packageJsonChanged = true;
@@ -113,27 +115,38 @@ function handleEslintConfFile() {
         rn: 'eslint-config-qunar-rn',
     };
     if (!configFile) {
-        let type = args && args[0] && args[0].slice(1);
-        const depend = (type && extendList[type]) || extendList.base;
-        const config = { extends: [depend, 'plugin:diff/diff'] };
+        // let type = args && args[0] && args[0].slice(1);
+        // const depend = (type && extendList[type]) || extendList.base;
+
+        const extendRules = [];
+
+        if ('react' in dependencies) {
+            extendRules.push(extendList.react);
+        }
+        if ('qunar-react-native' in dependencies) {
+            extendRules.push(extendList.rn);
+        }
+
+        if (packageJson && packageJson.name && packageJson.name.indexOf('node') !== -1) {
+            extendRules.push(extendList.node);
+        }
+
+        if (extendRules.length === 0) {
+            extendRules.push(extendList.base);
+        }
+
+        // const config = { extends: [depend, 'plugin:diff/diff'] };
+        const config = { extends: [...extendRules, 'plugin:diff/diff'] };
         packageJson.devDependencies[depend] = 'latest';
 
         packageJsonChanged = true;
         // 将配置对象转换为字符串
         const configStr = `module.exports = ${JSON.stringify(config, null, 2)};\n`;
-        // 写入文件
-        // fs.writeFile('.eslintrc.js', configStr, (err) => {
-        //     if (err) {
-        //         console.error(err);
-        //     } else {
-        //         console.log('.eslintrc.js 文件已创建');
-        //     }
-        // });
         try {
             fs.writeFileSync('.eslintrc.js', configStr);
             console.log('.eslintrc.js 文件创建成功');
         } catch (err) {
-            console.error(`写入配置文件时发生错误: ${err}`);
+            console.error(`\x1b[31m写入配置文件时发生错误: ${err}\x1b[0m`);
         }
     }
 }
