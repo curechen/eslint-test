@@ -1,6 +1,6 @@
 // const readline = require('readline');
 const fs = require('fs');
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const path = require('path');
 const args = process.argv.slice(2);
 
@@ -36,16 +36,27 @@ packageJsonChanged && fs.writeFileSync(packageJsonPath, JSON.stringify(packageJs
 // 输出加载信息
 console.log('正在执行 npm install 安装依赖，请稍候...');
 // 执行 npm install 来安装新的依赖
-exec('npm install', (error) => {
-    if (error) {
-        console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
-    } else {
+// exec('npm install', (error) => {
+//     if (error) {
+//         console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
+//     } else {
+//         console.log('执行 npm install 下载依赖完成');
+//         packageJsonChanged ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！') : console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖！');
+//         createHuskyConfig();
+//     }
+// });
+
+const childProcess = spawn('npm', ['install'], { stdio: 'inherit' });
+childProcess.on('close', (code) => {
+    if (code === 0) {
         console.log('执行 npm install 下载依赖完成');
-        packageJsonChanged
-            ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！')
-            : console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖！');
+        packageJsonChanged ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！') : console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖!');
         createHuskyConfig();
     }
+});
+// 添加信号处理程序，以便在接收到Ctrl+C信号时终止子进程
+process.on('SIGINT', () => {
+    childProcess.kill('SIGINT');
 });
 
 /**
@@ -106,24 +117,18 @@ function handleEslintConfFile() {
             const extendRules = [];
             const isTypescript = 'typescript' in packageJson.dependencies;
             if ('react' in packageJson.dependencies) {
-                isTypescript
-                    ? extendRules.push(extendList.ts_react)
-                    : extendRules.push(extendList.react);
+                isTypescript ? extendRules.push(extendList.ts_react) : extendRules.push(extendList.react);
             }
             if ('qunar-react-native' in packageJson.dependencies) {
                 isTypescript ? extendRules.push(extendList.ts_rn) : extendRules.push(extendList.rn);
             }
 
             if (packageJson && packageJson.name && packageJson.name.indexOf('node') !== -1) {
-                isTypescript
-                    ? extendRules.push(extendList.ts_node)
-                    : extendRules.push(extendList.node);
+                isTypescript ? extendRules.push(extendList.ts_node) : extendRules.push(extendList.node);
             }
 
             if (extendRules.length === 0) {
-                isTypescript
-                    ? extendRules.push(extendList.ts_base)
-                    : extendRules.push(extendList.base);
+                isTypescript ? extendRules.push(extendList.ts_base) : extendRules.push(extendList.base);
             }
 
             // const config = { extends: [depend, 'plugin:diff/diff'] };
@@ -146,7 +151,7 @@ function handleEslintConfFile() {
 }
 
 function hasESLintConfigFile() {
-    const filePaths = ['.eslintrc.js', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml'];
+    const filePaths = ['.eslintrc.js', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml', '.eslintrc'];
     let configFile = '';
 
     for (const file of filePaths) {
