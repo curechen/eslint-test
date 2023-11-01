@@ -23,14 +23,57 @@ packages/*/lib
 add.js
 `;
 
+const defaultGitIgnoreConfig = `
+# kdiff3 ignore
+*.orig
+
+# maven ignore
+target/
+node_modules/
+
+# eclipse ignore
+.settings/
+.project
+.classpath
+
+# idea ignore
+.idea/
+*.ipr
+*.iml
+*.iws
+
+# temp ignore
+*.log
+*.cache
+*.diff
+*.patch
+*.tmp
+
+# system ignore
+.DS_Store
+Thumbs.db
+
+# package ignore (optional)
+# *.jar
+# *.war
+# *.zip
+# *.tar
+# *.tar.gz
+
+# pods ignore
+Pods/
+
+package-lock.json
+.husky
+`
+
 let packageJsonChanged = false;
 
 packageJson.dependencies = packageJson.dependencies || {};
 packageJson.devDependencies = packageJson.devDependencies || {};
 
 handlePreCommitDependency();
-// handleEslintConfFile();
-// handleEslintIgnoreFile();
+handleGitIgnoreFile();
 
 packageJsonChanged && fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
@@ -61,7 +104,7 @@ process.on('SIGINT', () => {
 });
 
 /**
- * 提交前检测需要依赖 husky/pre-commit + lint-staged，该函数目的就是为了判断当前项目中是否存在这些依赖，不存在则添加
+ * 提交前检测需要依赖 eslint + husky/pre-commit + lint-staged，该函数目的就是为了判断当前项目中是否存在这些依赖，不存在则添加
  */
 function handlePreCommitDependency() {
     handleEslintDependency();
@@ -193,9 +236,13 @@ function handleEslintIgnoreFile() {
         fs.writeFileSync(eslintIgnorePath, defaultEslintIgnoreConfig);
         console.log('.eslintignore 文件创建成功');
     } else {
-        // 如果文件已存在，追加行内容
-        fs.appendFileSync(eslintIgnorePath, lineToAdd);
         console.log('.eslintignore 文件已存在');
+        // 如果文件已存在，读取文件内容
+        const existingContent = fs.readFileSync(eslintIgnorePath, 'utf-8');
+        // 判断是否已存在当前文件名，不存在再添加
+        if (!existingContent.includes(currentFileName)) {
+            fs.appendFileSync(eslintIgnorePath, lineToAdd);
+        }
     }
 }
 
@@ -283,6 +330,27 @@ function handleNanachiDependency() {
         packageJson.devDependencies['eslint-plugin-import'] = '^2.29.0';
         packageJson.devDependencies['babel-eslint'] = '^10.0.1';
     }
+}
+
+/**
+ * 判断当前根目录中是否存在 gitIgnore 文件，不存在则创建
+ */
+function handleGitIgnoreFile() {
+  const currentDirectory = process.cwd();
+  const gitIgnorePath = path.join(currentDirectory, '.gitignore');
+  const lineToAdd = `\n.husky`; // 当前文件名加换行符
+
+  if (!fs.existsSync(gitIgnorePath)) {
+      fs.writeFileSync(gitIgnorePath, defaultGitIgnoreConfig);
+      console.log('.gitignore 文件创建成功');
+  } else {
+      console.log('.gitignore 文件已存在');
+      // 如果文件已存在，添加 .husky 文件夹
+      const existingContent = fs.readFileSync(gitIgnorePath, 'utf-8');
+      if (!existingContent.includes('.husky')) {
+          fs.appendFileSync(gitIgnorePath, lineToAdd);
+      }
+  }
 }
 
 /**
