@@ -3,7 +3,8 @@ const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const path = require('path');
 const args = process.argv.slice(2);
-
+// 执行命令时的参数，比如 node add.js -react 那这里拿到的就是 react
+const type = args && args[0] && args[0].slice(1);
 // 读取 package.json 文件
 const packageJsonPath = './package.json';
 const packageJson = require(packageJsonPath);
@@ -75,11 +76,23 @@ function handlePreCommitDependency() {
  */
 function handleEslintDependency() {
     const hasEslint = packageJson.devDependencies.eslint;
-    // 只有 nanachi 需要指定 eslint 版本，其他项目可以通过引入 base 文件来引入 eslint，不需要额外添加
-    if (isNanachi && !hasEslint) {
-        packageJson.devDependencies.eslint = '^5.6.1';
+    if (!hasEslint) {
+        // 只有 nanachi 需要指定 eslint 版本，其他项目可以通过引入 base 文件来引入 eslint，不需要额外添加
+        if (isNanachi || type === 'normal') {
+            // nanachi 必须是 5.6.1 这个版本，因为其他包依赖都是 5.6.1
+            packageJson.devDependencies.eslint = '^5.6.1';
+        } else {
+            packageJson.devDependencies.eslint = '^7.5.0';
+        }
         packageJsonChanged = true;
     }
+
+    // 如果当前没有 eslint 依赖或者版本过低，则添加相关依赖
+    // const currentEslintVersion = packageJson.devDependencies.eslint;
+    // if (!currentEslintVersion || isEslintVersionLower(currentEslintVersion, '6.7.0')) {
+    //     packageJson.devDependencies.eslint = '^6.7.0';
+    //     packageJsonChanged = true;
+    // }
     handleEslintConfFile();
     handleEslintIgnoreFile();
 }
@@ -103,8 +116,6 @@ function handleEslintConfFile() {
         // let type = args && args[0] && args[0].slice(1);
         // const depend = (type && extendList[type]) || extendList.base;
         let config = {};
-
-        const type = args && args[0] && args[0].slice(1);
 
         if (isNanachi || type === 'normal') {
             // nanachi 单独写配置
@@ -175,11 +186,15 @@ function hasESLintConfigFile() {
 function handleEslintIgnoreFile() {
     const currentDirectory = process.cwd();
     const eslintIgnorePath = path.join(currentDirectory, '.eslintignore');
+    const currentFileName = path.basename(__filename);
+    const lineToAdd = `\n${currentFileName}`; // 当前文件名加换行符
 
     if (!fs.existsSync(eslintIgnorePath)) {
         fs.writeFileSync(eslintIgnorePath, defaultEslintIgnoreConfig);
         console.log('.eslintignore 文件创建成功');
     } else {
+        // 如果文件已存在，追加行内容
+        fs.appendFileSync(eslintIgnorePath, lineToAdd);
         console.log('.eslintignore 文件已存在');
     }
 }
@@ -246,11 +261,12 @@ function handleLintStagedDependency() {
  * 处理 eslint-plugin-diff 相关依赖及配置
  */
 function handleEslintPluginDiffDependency() {
-    // nanachi eslint 版本不兼容，所以不使用该插件
-    if (!isNanachi) {
-        packageJson.devDependencies['eslint-plugin-diff'] = '1.0.15'; // 适配低版本 node
-        packageJsonChanged = true;
-    }
+    const currentEslintVersion = packageJson.devDependencies.eslint;
+    // nanachi 或者 eslint 版本较低时都不使用 diff，不支持，nanachi 本质也是因为 eslint 版本较低
+    if (isNanachi) return;
+    if (isEslintVersionLower(currentEslintVersion, '6.7.0')) return;
+    packageJson.devDependencies['eslint-plugin-diff'] = '1.0.15'; // 适配低版本 node
+    packageJsonChanged = true;
 }
 
 function handleNanachiDependency() {
@@ -267,4 +283,29 @@ function handleNanachiDependency() {
         packageJson.devDependencies['eslint-plugin-import'] = '^2.29.0';
         packageJson.devDependencies['babel-eslint'] = '^10.0.1';
     }
+}
+
+/**
+ * 比较 eslint 版本
+ */
+function isEslintVersionLower(currentVersion, targetVersion) {
+    if (!currentVersion || !targetVersion) {
+        return false;
+    }
+
+    const normalizedCurrentVersion = currentVersion.replace('^', '');
+    const normalizedTargetVersion = targetVersion.replace('^', '');
+
+    const currentParts = normalizedCurrentVersion.split('.').map((part) => parseInt(part, 10));
+    const targetParts = normalizedTargetVersion.split('.').map((part) => parseInt(part, 10));
+
+    for (let i = 0; i < targetParts.length; i++) {
+        if (currentParts[i] < targetParts[i]) {
+            return true;
+        } else if (currentParts[i] > targetParts[i]) {
+            return false;
+        }
+    }
+
+    return false;
 }
