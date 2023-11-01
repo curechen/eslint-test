@@ -65,7 +65,7 @@ Pods/
 
 package-lock.json
 .husky
-`
+`;
 
 let packageJsonChanged = false;
 
@@ -297,11 +297,14 @@ function handleLintStagedDependency() {
         packageJson.devDependencies['lint-staged'] = '^9.2.5';
         packageJsonChanged = true;
     }
-    packageJson['lint-staged'] = {
-        // 'src/**/*.{js,jsx}': ['eslint'],
-        // 'source/**/*.{js,jsx}': ['eslint'],
-        '*.{js,jsx}': ['eslint'],
-    };
+
+    if (!packageJson['lint-staged']) {
+        packageJson['lint-staged'] = {
+            'src/**/*.{js,jsx}': ['eslint'],
+            'source/**/*.{js,jsx}': ['eslint'],
+            // '*.{js,jsx}': ['eslint'],
+        };
+    }
 }
 
 /**
@@ -336,21 +339,24 @@ function handleNanachiDependency() {
  * 判断当前根目录中是否存在 gitIgnore 文件，不存在则创建
  */
 function handleGitIgnoreFile() {
-  const currentDirectory = process.cwd();
-  const gitIgnorePath = path.join(currentDirectory, '.gitignore');
-  const lineToAdd = `\n.husky`; // 当前文件名加换行符
+    const currentDirectory = process.cwd();
+    const gitIgnorePath = path.join(currentDirectory, '.gitignore');
+    const currentFileName = path.basename(__filename);
 
-  if (!fs.existsSync(gitIgnorePath)) {
-      fs.writeFileSync(gitIgnorePath, defaultGitIgnoreConfig);
-      console.log('.gitignore 文件创建成功');
-  } else {
-      console.log('.gitignore 文件已存在');
-      // 如果文件已存在，添加 .husky 文件夹
-      const existingContent = fs.readFileSync(gitIgnorePath, 'utf-8');
-      if (!existingContent.includes('.husky')) {
-          fs.appendFileSync(gitIgnorePath, lineToAdd);
+    if (!fs.existsSync(gitIgnorePath)) {
+        fs.writeFileSync(gitIgnorePath, defaultGitIgnoreConfig);
+        console.log('.gitignore 文件创建成功');
+    } else {
+        console.log('.gitignore 文件已存在');
+        // 如果文件已存在，添加 .husky 文件夹
+        const existingContent = fs.readFileSync(gitIgnorePath, 'utf-8');
+        if (!existingContent.includes('.husky')) {
+            fs.appendFileSync(gitIgnorePath, `\n.husky`);
+        }
+        if (!existingContent.includes(currentFileName)) {
+          fs.appendFileSync(gitIgnorePath, `\n${currentFileName}`);
       }
-  }
+    }
 }
 
 /**
