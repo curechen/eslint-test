@@ -118,7 +118,7 @@ function handlePreCommitDependency() {
  * 处理 eslint 相关依赖及配置
  */
 function handleEslintDependency() {
-    const hasEslint = packageJson.devDependencies.eslint;
+    const hasEslint = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
     if (!hasEslint) {
         // 只有 nanachi 需要指定 eslint 版本，其他项目可以通过引入 base 文件来引入 eslint，不需要额外添加
         if (isNanachi || type === 'normal') {
@@ -160,12 +160,15 @@ function handleEslintConfFile() {
         // const depend = (type && extendList[type]) || extendList.base;
         let config = {};
 
+        const currentEslintVersion = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
         if (isNanachi || type === 'normal') {
             // nanachi 单独写配置
-            config = { extends: ['eslint-config-airbnb-base'], parser: 'babel-eslint' };
+            config = { extends: ['eslint:recommended'], parser: 'babel-eslint' };
         } else if (type) {
             const depend = type && extendList[type];
-            config = { extends: [depend, 'plugin:diff/diff'] };
+            config = { extends: [depend] };
+            // 高版本 eslint 添加 diff 拓展
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push('plugin:diff/diff');
             packageJson.devDependencies[depend] = 'latest';
         } else {
             const extendRules = [];
@@ -186,7 +189,9 @@ function handleEslintConfFile() {
             }
 
             // const config = { extends: [depend, 'plugin:diff/diff'] };
-            config = { extends: [...extendRules, 'plugin:diff/diff'] };
+            config = { extends: [...extendRules] };
+            // 高版本 eslint 添加 diff 拓展
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push('plugin:diff/diff');
             extendRules.forEach((rule) => (packageJson.devDependencies[rule] = 'latest'));
         }
 
@@ -250,7 +255,7 @@ function handleEslintIgnoreFile() {
  * 处理 husky 相关依赖及配置
  */
 function handleHuskyDependency() {
-    const hasHusky = packageJson.devDependencies.husky;
+    const hasHusky = packageJson.devDependencies.husky || packageJson.dependencies.husky;
     if (!hasHusky) {
         packageJson.devDependencies.husky = '^3.0.5';
         // 有则替换 prepare 命令，无则添加
@@ -292,7 +297,7 @@ function createHuskyConfig() {
  * 处理 lint-staged 相关依赖及配置
  */
 function handleLintStagedDependency() {
-    const hasLintStaged = packageJson.devDependencies['lint-staged'];
+    const hasLintStaged = packageJson.devDependencies['lint-staged'] || packageJson.dependencies['lint-staged'];
     if (!hasLintStaged) {
         packageJson.devDependencies['lint-staged'] = '^9.2.5';
         packageJsonChanged = true;
@@ -300,9 +305,9 @@ function handleLintStagedDependency() {
 
     if (!packageJson['lint-staged']) {
         packageJson['lint-staged'] = {
-            'src/**/*.{js,jsx}': ['eslint'],
-            'source/**/*.{js,jsx}': ['eslint'],
-            // '*.{js,jsx}': ['eslint'],
+            // 'src/**/*.{js,jsx}': ['eslint'],
+            // 'source/**/*.{js,jsx}': ['eslint'],
+            '*.{js,jsx}': ['eslint'],
         };
     }
 }
@@ -311,7 +316,7 @@ function handleLintStagedDependency() {
  * 处理 eslint-plugin-diff 相关依赖及配置
  */
 function handleEslintPluginDiffDependency() {
-    const currentEslintVersion = packageJson.devDependencies.eslint;
+    const currentEslintVersion = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
     // nanachi 或者 eslint 版本较低时都不使用 diff，不支持，nanachi 本质也是因为 eslint 版本较低
     if (isNanachi) return;
     if (isEslintVersionLower(currentEslintVersion, '6.7.0')) return;
@@ -320,7 +325,7 @@ function handleEslintPluginDiffDependency() {
 }
 
 function handleNanachiDependency() {
-    const hasEslint = packageJson.devDependencies.eslint;
+    const hasEslint = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
     // 对 nanachi 项目单独进行配置
     if (isNanachi) {
         // packageJson['pre-commit'] = ['lint-staged'];
@@ -329,8 +334,6 @@ function handleNanachiDependency() {
             packageJson.devDependencies.eslint = '^5.6.1';
             packageJsonChanged = true;
         }
-        packageJson.devDependencies['eslint-config-airbnb-base'] = '^15.0.0';
-        packageJson.devDependencies['eslint-plugin-import'] = '^2.29.0';
         packageJson.devDependencies['babel-eslint'] = '^10.0.1';
     }
 }
@@ -360,7 +363,7 @@ function handleGitIgnoreFile() {
 }
 
 /**
- * 比较 eslint 版本
+ * 比较 eslint 版本 currentVersion < targetVersion 的情况返回 true
  */
 function isEslintVersionLower(currentVersion, targetVersion) {
     if (!currentVersion || !targetVersion) {
