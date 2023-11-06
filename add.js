@@ -119,6 +119,9 @@ function handlePreCommitDependency() {
  */
 function handleEslintDependency() {
     const hasEslint = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
+    const currentEslintVersion = hasEslint;
+
+    // 如果当前没有 eslint 依赖或者版本过低，则添加相关依赖
     if (!hasEslint) {
         // 只有 nanachi 需要指定 eslint 版本，其他项目可以通过引入 base 文件来引入 eslint，不需要额外添加
         if (isNanachi || type === 'normal') {
@@ -129,14 +132,11 @@ function handleEslintDependency() {
             packageJson.devDependencies.eslint = '^7.5.0';
         }
         packageJsonChanged = true;
+    } else if (isEslintVersionLower(currentEslintVersion, '6.7.0')) {
+        packageJson.devDependencies.eslint = '^7.5.0';
+        packageJsonChanged = true;
     }
 
-    // 如果当前没有 eslint 依赖或者版本过低，则添加相关依赖
-    // const currentEslintVersion = packageJson.devDependencies.eslint;
-    // if (!currentEslintVersion || isEslintVersionLower(currentEslintVersion, '6.7.0')) {
-    //     packageJson.devDependencies.eslint = '^6.7.0';
-    //     packageJsonChanged = true;
-    // }
     handleEslintConfFile();
     handleEslintIgnoreFile();
 }
@@ -173,7 +173,7 @@ function handleEslintConfFile() {
             packageJson.devDependencies[depend] = 'latest';
         } else {
             const extendRules = [];
-            const isTypescript = false;//'typescript' in packageJson.dependencies;
+            const isTypescript = false; //'typescript' in packageJson.dependencies;
             if ('react' in packageJson.dependencies) {
                 isTypescript ? extendRules.push(extendList.ts_react) : extendRules.push(extendList.react);
             }
@@ -197,10 +197,7 @@ function handleEslintConfFile() {
         }
         config.rules = {
             'no-unused-expressions': 'error',
-            'indent': [
-                'error',
-                4,
-            ]
+            indent: ['error', 4],
         };
 
         packageJsonChanged = true;
@@ -365,8 +362,8 @@ function handleGitIgnoreFile() {
             fs.appendFileSync(gitIgnorePath, `\n.husky`);
         }
         if (!existingContent.includes(currentFileName)) {
-          fs.appendFileSync(gitIgnorePath, `\n${currentFileName}`);
-      }
+            fs.appendFileSync(gitIgnorePath, `\n${currentFileName}`);
+        }
     }
 }
 
