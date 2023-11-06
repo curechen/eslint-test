@@ -124,6 +124,7 @@ function handleEslintDependency() {
         if (isNanachi || type === 'normal') {
             // nanachi 必须是 5.6.1 这个版本，因为其他包依赖都是 5.6.1
             packageJson.devDependencies.eslint = '^5.6.1';
+            packageJson.devDependencies['babel-eslint'] = '^10.0.1';
         } else {
             packageJson.devDependencies.eslint = '^7.5.0';
         }
@@ -172,7 +173,7 @@ function handleEslintConfFile() {
             packageJson.devDependencies[depend] = 'latest';
         } else {
             const extendRules = [];
-            const isTypescript = 'typescript' in packageJson.dependencies;
+            const isTypescript = false;//'typescript' in packageJson.dependencies;
             if ('react' in packageJson.dependencies) {
                 isTypescript ? extendRules.push(extendList.ts_react) : extendRules.push(extendList.react);
             }
@@ -194,6 +195,13 @@ function handleEslintConfFile() {
             !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push('plugin:diff/diff');
             extendRules.forEach((rule) => (packageJson.devDependencies[rule] = 'latest'));
         }
+        config.rules = {
+            'no-unused-expressions': 'error',
+            'indent': [
+                'error',
+                4,
+            ]
+        };
 
         packageJsonChanged = true;
         // 将配置对象转换为字符串
