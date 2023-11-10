@@ -129,11 +129,12 @@ function handleEslintDependency() {
             packageJson.devDependencies.eslint = '^5.6.1';
             packageJson.devDependencies['babel-eslint'] = '^10.0.1';
         } else {
-            packageJson.devDependencies.eslint = '^7.5.0';
+            packageJson.devDependencies.eslint = '^6.7.0';
         }
         packageJsonChanged = true;
     } else if (isEslintVersionLower(currentEslintVersion, '6.7.0')) {
-        packageJson.devDependencies.eslint = '^7.5.0';
+        if (packageJson.devDependencies.eslint) packageJson.devDependencies.eslint = '^6.7.0';
+        else packageJson.dependencies.eslint = '^6.7.0';
         packageJsonChanged = true;
     }
 
@@ -145,7 +146,7 @@ function handleEslintDependency() {
  * 判断当前根目录中是否存在 eslint 相关配置文件，不存在则创建
  */
 function handleEslintConfFile() {
-    const configFile = hasESLintConfigFile();
+    const configFilePath = hasESLintConfigFile();
     const extendList = {
         base: '@qnpm/eslint-config-qunar-base',
         node: '@qnpm/eslint-config-qunar-node',
@@ -156,7 +157,8 @@ function handleEslintConfFile() {
         ts_react: '@qnpm/eslint-config-qunar-typescript-react',
         ts_rn: 'eslint-config-qunar-typescript-rn',
     };
-    if (!configFile) {
+    const diffPluginExtends = 'plugin:diff/diff';
+    if (!configFilePath) {
         // let type = args && args[0] && args[0].slice(1);
         // const depend = (type && extendList[type]) || extendList.base;
         let config = {};
@@ -169,7 +171,7 @@ function handleEslintConfFile() {
             const depend = type && extendList[type];
             config = { extends: [depend] };
             // 高版本 eslint 添加 diff 拓展
-            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push('plugin:diff/diff');
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push(diffPluginExtends);
             packageJson.devDependencies[depend] = 'latest';
         } else {
             const extendRules = [];
@@ -189,10 +191,10 @@ function handleEslintConfFile() {
                 isTypescript ? extendRules.push(extendList.ts_base) : extendRules.push(extendList.base);
             }
 
-            // const config = { extends: [depend, 'plugin:diff/diff'] };
+            // const config = { extends: [depend, diffPluginExtends] };
             config = { extends: [...extendRules] };
             // 高版本 eslint 添加 diff 拓展
-            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push('plugin:diff/diff');
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push(diffPluginExtends);
             extendRules.forEach((rule) => (packageJson.devDependencies[rule] = 'latest'));
         }
         config.rules = {
@@ -211,26 +213,55 @@ function handleEslintConfFile() {
         }
     } else {
         console.log('eslint 配置文件已存在');
+        const config = fs.readFileSync(configFilePath, 'utf8');
+        const updatedConfig = addDiffPluginToExtends(config);
+
+        fs.writeFileSync(configFilePath, updatedConfig, 'utf8');
     }
 }
+/**
+ * 逐行读取 eslint 配置代码，在 extends 中添加 diff 插件
+ */
+function addDiffPluginToExtends(config) {
+    const lines = config.split('\n');
+    const extendsIndex = lines.findIndex((line) => line.includes('extends: ['));
 
+    if (extendsIndex !== -1) {
+        const extendsLine = lines[extendsIndex];
+        if (!extendsLine.includes('plugin:diff/diff')) {
+            lines[extendsIndex] = extendsLine.replace(']', `, 'plugin:diff/diff']`);
+        }
+    } else {
+        // 如果没有找到 extends 行，创建一个新 extends 行
+        const moduleExportsIndex = lines.findIndex(line => line.includes('module.exports'));
+        if (moduleExportsIndex !== -1) {
+            lines.splice(moduleExportsIndex + 1, 0, '    extends: [\'plugin:diff/diff\'],');
+        }
+    }
+
+    return lines.join('\n');
+}
+
+/**
+ * 检测当前项目是否含有 eslint 配置文件，如果没有返回空字符串，如果有则返回文件地址
+ */
 function hasESLintConfigFile() {
-    const filePaths = ['.eslintrc.js', '.eslintrc.json', '.eslintrc.yaml', '.eslintrc.yml', '.eslintrc'];
-    let configFile = '';
+    const filePaths = ['eslint.config.js', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.yaml', '.eslintrc.yml', '.eslintrc.json'];
+    let configFilePath = '';
 
     for (const file of filePaths) {
         const fullPath = path.resolve(file);
 
         try {
             fs.accessSync(fullPath, fs.constants.F_OK);
-            configFile = fullPath;
+            configFilePath = fullPath;
             break;
         } catch (err) {
             // 文件不存在，继续检查下一个文件
         }
     }
 
-    return configFile;
+    return configFilePath;
 }
 
 /**

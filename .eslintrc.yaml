@@ -1,0 +1,17 @@
+root: true
+parser: '@babel/eslint-parser'
+env:
+  browser: true
+  node: true
+rules:
+  indent:
+    - error
+    - 2
+ignorePatterns:
+  - node_modules/
+  - build/
+settings:
+  react:
+    version: detect
+extends:
+  - plugin:diff/diff
