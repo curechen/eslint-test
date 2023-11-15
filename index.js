@@ -1,14 +1,12 @@
-#!/usr/bin/env node
 // const readline = require('readline');
 const fs = require('fs');
 const { exec, spawn } = require('child_process');
 const path = require('path');
-
 const args = process.argv.slice(2);
 // 执行命令时的参数，比如 node add.js -react 那这里拿到的就是 react
 const type = args && args[0] && args[0].slice(1);
 // 读取 package.json 文件
-const packageJsonPath = path.resolve(process.cwd(), 'package.json');
+const packageJsonPath = './package.json';
 const packageJson = require(packageJsonPath);
 
 const isNanachi = packageJson && packageJson.name && packageJson.name.indexOf('nnc') !== -1;
@@ -22,6 +20,7 @@ dist
 build
 packages/*/lib
 .eslintrc.js
+add.js
 `;
 
 const defaultGitIgnoreConfig = `
@@ -95,11 +94,7 @@ const childProcess = spawn('npm', ['install'], { stdio: 'inherit' });
 childProcess.on('close', (code) => {
     if (code === 0) {
         console.log('执行 npm install 下载依赖完成');
-        packageJsonChanged
-            ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！')
-            : console.log(
-                'package.json 中已存在 eslint，husky，lint-staged 相关依赖!'
-            );
+        packageJsonChanged ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！') : console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖!');
         createHuskyConfig();
     }
 });
@@ -128,18 +123,18 @@ function handleEslintDependency() {
 
     // 如果当前没有 eslint 依赖或者版本过低，则添加相关依赖
     if (!hasEslint) {
-    // 只有 nanachi 需要指定 eslint 版本，其他项目可以通过引入 base 文件来引入 eslint，不需要额外添加
+        // 只有 nanachi 需要指定 eslint 版本，其他项目可以通过引入 base 文件来引入 eslint，不需要额外添加
         if (isNanachi || type === 'normal') {
             // nanachi 必须是 5.6.1 这个版本，因为其他包依赖都是 5.6.1
             packageJson.devDependencies.eslint = '^5.6.1';
             packageJson.devDependencies['babel-eslint'] = '^10.0.1';
         } else {
-            packageJson.devDependencies.eslint = '^7.5.0';
+            packageJson.devDependencies.eslint = '^6.7.0';
         }
         packageJsonChanged = true;
     } else if (isEslintVersionLower(currentEslintVersion, '6.7.0')) {
-        if (packageJson.devDependencies.eslint) packageJson.devDependencies.eslint = '^7.5.0';
-        else packageJson.dependencies.eslint = '^7.5.0';
+        if (packageJson.devDependencies.eslint) packageJson.devDependencies.eslint = '^6.7.0';
+        else packageJson.dependencies.eslint = '^6.7.0';
         packageJsonChanged = true;
     }
 
@@ -160,12 +155,12 @@ function handleEslintConfFile() {
         ts_base: 'eslint-config-qunar-typescript-base',
         ts_node: '@qnpm/eslint-config-qunar-typescript-node',
         ts_react: '@qnpm/eslint-config-qunar-typescript-react',
-        ts_rn: 'eslint-config-qunar-typescript-rn'
+        ts_rn: 'eslint-config-qunar-typescript-rn',
     };
     const diffPluginExtends = 'plugin:diff/diff';
     if (!configFilePath) {
-    // let type = args && args[0] && args[0].slice(1);
-    // const depend = (type && extendList[type]) || extendList.base;
+        // let type = args && args[0] && args[0].slice(1);
+        // const depend = (type && extendList[type]) || extendList.base;
         let config = {};
 
         const currentEslintVersion = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
@@ -176,58 +171,42 @@ function handleEslintConfFile() {
             const depend = type && extendList[type];
             config = { extends: [depend] };
             // 高版本 eslint 添加 diff 拓展
-            !isEslintVersionLower(currentEslintVersion, '6.7.0')
-        && config.extends.push(diffPluginExtends);
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push(diffPluginExtends);
             packageJson.devDependencies[depend] = 'latest';
         } else {
             const extendRules = [];
-            const isTypescript = false; // 'typescript' in packageJson.dependencies;
+            const isTypescript = false; //'typescript' in packageJson.dependencies;
             if ('react' in packageJson.dependencies) {
-                isTypescript
-                    ? extendRules.push(extendList.ts_react)
-                    : extendRules.push(extendList.react);
+                isTypescript ? extendRules.push(extendList.ts_react) : extendRules.push(extendList.react);
             }
             if ('qunar-react-native' in packageJson.dependencies) {
-                isTypescript
-                    ? extendRules.push(extendList.ts_rn)
-                    : extendRules.push(extendList.rn);
+                isTypescript ? extendRules.push(extendList.ts_rn) : extendRules.push(extendList.rn);
             }
 
-            if (
-                packageJson
-        && packageJson.name
-        && packageJson.name.indexOf('node') !== -1
-            ) {
-                isTypescript
-                    ? extendRules.push(extendList.ts_node)
-                    : extendRules.push(extendList.node);
+            if (packageJson && packageJson.name && packageJson.name.indexOf('node') !== -1) {
+                isTypescript ? extendRules.push(extendList.ts_node) : extendRules.push(extendList.node);
             }
 
             if (extendRules.length === 0) {
-                isTypescript
-                    ? extendRules.push(extendList.ts_base)
-                    : extendRules.push(extendList.base);
+                isTypescript ? extendRules.push(extendList.ts_base) : extendRules.push(extendList.base);
             }
 
             // const config = { extends: [depend, diffPluginExtends] };
             config = { extends: [...extendRules] };
             // 高版本 eslint 添加 diff 拓展
-            !isEslintVersionLower(currentEslintVersion, '6.7.0')
-        && config.extends.push(diffPluginExtends);
-            extendRules.forEach(
-                (rule) => (packageJson.devDependencies[rule] = 'latest')
-            );
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push(diffPluginExtends);
+            extendRules.forEach((rule) => (packageJson.devDependencies[rule] = 'latest'));
         }
         config.rules = {
             'no-unused-expressions': 'error',
-            indent: ['error', 4]
+            indent: ['error', 4],
         };
 
         packageJsonChanged = true;
         // 将配置对象转换为字符串
         const configStr = `module.exports = ${JSON.stringify(config, null, 2)};\n`;
         try {
-            fs.writeFileSync(path.resolve(process.cwd(), '.eslintrc.js'), configStr);
+            fs.writeFileSync('.eslintrc.js', configStr);
             console.log('.eslintrc.js 文件创建成功');
         } catch (err) {
             console.error(`\x1b[31m写入配置文件时发生错误: ${err}\x1b[0m`);
@@ -241,7 +220,7 @@ function handleEslintConfFile() {
     }
 }
 /**
- * 逐行读取 eslint 配置代码，替换 extends
+ * 逐行读取 eslint 配置代码，在 extends 中添加 diff 插件
  */
 function addDiffPluginToExtends(config) {
     const lines = config.split('\n');
@@ -250,18 +229,13 @@ function addDiffPluginToExtends(config) {
     if (extendsIndex !== -1) {
         const extendsLine = lines[extendsIndex];
         if (!extendsLine.includes('plugin:diff/diff')) {
-            lines[extendsIndex] = extendsLine.replace(']', ', \'plugin:diff/diff\']');
+            lines[extendsIndex] = extendsLine.replace(']', `, 'plugin:diff/diff']`);
         }
     } else {
-    // 如果没有找到 extends 行，创建一个新 extends 行
-        const moduleExportsIndex = lines.findIndex((line) => line.includes('module.exports')
-        );
+        // 如果没有找到 extends 行，创建一个新 extends 行
+        const moduleExportsIndex = lines.findIndex(line => line.includes('module.exports'));
         if (moduleExportsIndex !== -1) {
-            lines.splice(
-                moduleExportsIndex + 1,
-                0,
-                "    extends: ['plugin:diff/diff'],"
-            );
+            lines.splice(moduleExportsIndex + 1, 0, '    extends: [\'plugin:diff/diff\'],');
         }
     }
 
@@ -272,18 +246,11 @@ function addDiffPluginToExtends(config) {
  * 检测当前项目是否含有 eslint 配置文件，如果没有返回空字符串，如果有则返回文件地址
  */
 function hasESLintConfigFile() {
-    const filePaths = [
-        'eslint.config.js',
-        '.eslintrc.js',
-        '.eslintrc.cjs',
-        '.eslintrc.yaml',
-        '.eslintrc.yml',
-        '.eslintrc.json'
-    ];
+    const filePaths = ['eslint.config.js', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.yaml', '.eslintrc.yml', '.eslintrc.json'];
     let configFilePath = '';
 
     for (const file of filePaths) {
-        const fullPath = path.resolve(process.cwd(), file);
+        const fullPath = path.resolve(file);
 
         try {
             fs.accessSync(fullPath, fs.constants.F_OK);
@@ -326,7 +293,7 @@ function handleEslintIgnoreFile() {
 function handleHuskyDependency() {
     const hasHusky = packageJson.devDependencies.husky || packageJson.dependencies.husky;
     if (!hasHusky) {
-        packageJson.devDependencies.husky = '^8.0.3';
+        packageJson.devDependencies.husky = '^3.0.5';
         // 有则替换 prepare 命令，无则添加
         // prepare 钩子会在 npm install 前执行
         // packageJson.scripts = packageJson.scripts || {};
@@ -344,25 +311,19 @@ function handleHuskyDependency() {
 }
 
 function createHuskyConfig() {
-    const huskyFolder = path.resolve(process.cwd(), '.husky');
-    // const huskyFolder = './.husky';
+    const huskyFolder = './.husky';
     // 检查是否存在.husky文件夹
     if (!fs.existsSync(huskyFolder)) {
-    // 如果不存在，执行创建命令
+        // 如果不存在，执行创建命令
         console.log('正在创建 husky 配置文件，请等待');
         // 执行 npm install 来安装新的依赖
-        // process.chdir(process.cwd());
-        exec(
-            `npx husky install && npx husky add ${huskyFolder}/pre-commit 'npx lint-staged'`,
-            { stdio: 'inherit' },
-            (error) => {
-                if (error) {
-                    console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
-                } else {
-                    console.log('husky 配置文件创建成功');
-                }
+        exec("npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'", (error) => {
+            if (error) {
+                console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
+            } else {
+                console.log('husky 配置文件创建成功');
             }
-        );
+        });
     } else {
         console.log('.husky文件夹已存在');
     }
@@ -372,8 +333,7 @@ function createHuskyConfig() {
  * 处理 lint-staged 相关依赖及配置
  */
 function handleLintStagedDependency() {
-    const hasLintStaged = packageJson.devDependencies['lint-staged']
-    || packageJson.dependencies['lint-staged'];
+    const hasLintStaged = packageJson.devDependencies['lint-staged'] || packageJson.dependencies['lint-staged'];
     if (!hasLintStaged) {
         packageJson.devDependencies['lint-staged'] = '^9.2.5';
         packageJsonChanged = true;
@@ -383,7 +343,7 @@ function handleLintStagedDependency() {
         packageJson['lint-staged'] = {
             // 'src/**/*.{js,jsx}': ['eslint'],
             // 'source/**/*.{js,jsx}': ['eslint'],
-            '*.{js,jsx}': ['eslint']
+            '*.{js,jsx}': ['eslint'],
         };
     }
 }
@@ -404,8 +364,8 @@ function handleNanachiDependency() {
     const hasEslint = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
     // 对 nanachi 项目单独进行配置
     if (isNanachi) {
-    // packageJson['pre-commit'] = ['lint-staged'];
-    // packageJson.scripts['lint-staged'] = 'lint-staged';
+        // packageJson['pre-commit'] = ['lint-staged'];
+        // packageJson.scripts['lint-staged'] = 'lint-staged';
         if (!hasEslint) {
             packageJson.devDependencies.eslint = '^5.6.1';
             packageJsonChanged = true;
@@ -420,6 +380,7 @@ function handleNanachiDependency() {
 function handleGitIgnoreFile() {
     const currentDirectory = process.cwd();
     const gitIgnorePath = path.join(currentDirectory, '.gitignore');
+    const currentFileName = path.basename(__filename);
 
     if (!fs.existsSync(gitIgnorePath)) {
         fs.writeFileSync(gitIgnorePath, defaultGitIgnoreConfig);
@@ -429,11 +390,11 @@ function handleGitIgnoreFile() {
         // 如果文件已存在，添加 .husky 文件夹
         const existingContent = fs.readFileSync(gitIgnorePath, 'utf-8');
         if (!existingContent.includes('.husky')) {
-            fs.appendFileSync(gitIgnorePath, '\n.husky');
+            fs.appendFileSync(gitIgnorePath, `\n.husky`);
         }
-    // if (!existingContent.includes(currentFileName)) {
-    //   fs.appendFileSync(gitIgnorePath, `\n${currentFileName}`);
-    // }
+        if (!existingContent.includes(currentFileName)) {
+            fs.appendFileSync(gitIgnorePath, `\n${currentFileName}`);
+        }
     }
 }
 
@@ -448,17 +409,13 @@ function isEslintVersionLower(currentVersion, targetVersion) {
     const normalizedCurrentVersion = currentVersion.replace('^', '');
     const normalizedTargetVersion = targetVersion.replace('^', '');
 
-    const currentParts = normalizedCurrentVersion
-        .split('.')
-        .map((part) => parseInt(part, 10));
-    const targetParts = normalizedTargetVersion
-        .split('.')
-        .map((part) => parseInt(part, 10));
+    const currentParts = normalizedCurrentVersion.split('.').map((part) => parseInt(part, 10));
+    const targetParts = normalizedTargetVersion.split('.').map((part) => parseInt(part, 10));
 
     for (let i = 0; i < targetParts.length; i++) {
         if (currentParts[i] < targetParts[i]) {
             return true;
-        } if (currentParts[i] > targetParts[i]) {
+        } else if (currentParts[i] > targetParts[i]) {
             return false;
         }
     }
