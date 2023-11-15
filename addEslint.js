@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 // const readline = require('readline');
 const fs = require('fs');
 const { exec, spawn } = require('child_process');
@@ -6,7 +7,7 @@ const args = process.argv.slice(2);
 // 执行命令时的参数，比如 node add.js -react 那这里拿到的就是 react
 const type = args && args[0] && args[0].slice(1);
 // 读取 package.json 文件
-const packageJsonPath = './package.json';
+const packageJsonPath = path.resolve(process.cwd(), 'package.json');
 const packageJson = require(packageJsonPath);
 
 const isNanachi = packageJson && packageJson.name && packageJson.name.indexOf('nnc') !== -1;
@@ -20,7 +21,6 @@ dist
 build
 packages/*/lib
 .eslintrc.js
-add.js
 `;
 
 const defaultGitIgnoreConfig = `
@@ -155,7 +155,7 @@ function handleEslintConfFile() {
         ts_base: 'eslint-config-qunar-typescript-base',
         ts_node: '@qnpm/eslint-config-qunar-typescript-node',
         ts_react: '@qnpm/eslint-config-qunar-typescript-react',
-        ts_rn: 'eslint-config-qunar-typescript-rn',
+        ts_rn: 'eslint-config-qunar-typescript-rn'
     };
     const diffPluginExtends = 'plugin:diff/diff';
     if (!configFilePath) {
@@ -175,7 +175,7 @@ function handleEslintConfFile() {
             packageJson.devDependencies[depend] = 'latest';
         } else {
             const extendRules = [];
-            const isTypescript = false; //'typescript' in packageJson.dependencies;
+            const isTypescript = false; // 'typescript' in packageJson.dependencies;
             if ('react' in packageJson.dependencies) {
                 isTypescript ? extendRules.push(extendList.ts_react) : extendRules.push(extendList.react);
             }
@@ -206,7 +206,7 @@ function handleEslintConfFile() {
         // 将配置对象转换为字符串
         const configStr = `module.exports = ${JSON.stringify(config, null, 2)};\n`;
         try {
-            fs.writeFileSync('.eslintrc.js', configStr);
+            fs.writeFileSync(path.resolve(process.cwd(), '.eslintrc.js'), configStr);
             console.log('.eslintrc.js 文件创建成功');
         } catch (err) {
             console.error(`\x1b[31m写入配置文件时发生错误: ${err}\x1b[0m`);
@@ -250,7 +250,7 @@ function hasESLintConfigFile() {
     let configFilePath = '';
 
     for (const file of filePaths) {
-        const fullPath = path.resolve(file);
+        const fullPath = path.resolve(process.cwd(), file);
 
         try {
             fs.accessSync(fullPath, fs.constants.F_OK);
