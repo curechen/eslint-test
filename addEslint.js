@@ -64,7 +64,6 @@ Thumbs.db
 Pods/
 
 package-lock.json
-.husky
 `;
 
 let packageJsonChanged = false;
@@ -73,29 +72,22 @@ packageJson.dependencies = packageJson.dependencies || {};
 packageJson.devDependencies = packageJson.devDependencies || {};
 
 handlePreCommitDependency();
-handleGitIgnoreFile();
+// handleGitIgnoreFile();
 
 packageJsonChanged && fs.writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2));
 
 // 输出加载信息
 console.log('正在执行 npm install 安装依赖，请稍候...');
 // 执行 npm install 来安装新的依赖
-// exec('npm install', (error) => {
-//     if (error) {
-//         console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
-//     } else {
-//         console.log('执行 npm install 下载依赖完成');
-//         packageJsonChanged ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！') : console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖！');
-//         createHuskyConfig();
-//     }
-// });
-
 const childProcess = spawn('npm', ['install'], { stdio: 'inherit' });
 childProcess.on('close', (code) => {
     if (code === 0) {
         console.log('执行 npm install 下载依赖完成');
-        packageJsonChanged ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！') : console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖!');
-        createHuskyConfig();
+        packageJsonChanged
+            ? console.log('成功添加 eslint，husky，lint-staged 相关依赖！')
+            : console.log('package.json 中已存在 eslint，husky，lint-staged 相关依赖!');
+        // createHuskyConfig();
+        handleGitConfigFile();
     }
 });
 // 添加信号处理程序，以便在接收到Ctrl+C信号时终止子进程
@@ -123,7 +115,7 @@ function handleEslintDependency() {
 
     // 如果当前没有 eslint 依赖或者版本过低，则添加相关依赖
     if (!hasEslint) {
-        // 只有 nanachi 需要指定 eslint 版本，其他项目可以通过引入 base 文件来引入 eslint，不需要额外添加
+        // nanachi 需要指定 eslint 版本，或者不需要配置 diff 插件的情况，只需要最基础的 eslint 配置，diff 插件需要最低 eslint 版本为 6.7.0
         if (isNanachi || type === 'normal') {
             // nanachi 必须是 5.6.1 这个版本，因为其他包依赖都是 5.6.1
             packageJson.devDependencies.eslint = '^5.6.1';
@@ -155,15 +147,14 @@ function handleEslintConfFile() {
         ts_base: 'eslint-config-qunar-typescript-base',
         ts_node: '@qnpm/eslint-config-qunar-typescript-node',
         ts_react: '@qnpm/eslint-config-qunar-typescript-react',
-        ts_rn: 'eslint-config-qunar-typescript-rn'
+        ts_rn: 'eslint-config-qunar-typescript-rn',
     };
     const diffPluginExtends = 'plugin:diff/diff';
     if (!configFilePath) {
-        // let type = args && args[0] && args[0].slice(1);
-        // const depend = (type && extendList[type]) || extendList.base;
         let config = {};
 
-        const currentEslintVersion = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
+        const currentEslintVersion =
+            packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
         if (isNanachi || type === 'normal') {
             // nanachi 单独写配置
             config = { extends: ['eslint:recommended'], parser: 'babel-eslint' };
@@ -171,30 +162,38 @@ function handleEslintConfFile() {
             const depend = type && extendList[type];
             config = { extends: [depend] };
             // 高版本 eslint 添加 diff 拓展
-            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push(diffPluginExtends);
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') &&
+                config.extends.push(diffPluginExtends);
             packageJson.devDependencies[depend] = 'latest';
         } else {
             const extendRules = [];
             const isTypescript = false; // 'typescript' in packageJson.dependencies;
             if ('react' in packageJson.dependencies) {
-                isTypescript ? extendRules.push(extendList.ts_react) : extendRules.push(extendList.react);
+                isTypescript
+                    ? extendRules.push(extendList.ts_react)
+                    : extendRules.push(extendList.react);
             }
             if ('qunar-react-native' in packageJson.dependencies) {
                 isTypescript ? extendRules.push(extendList.ts_rn) : extendRules.push(extendList.rn);
             }
 
             if (packageJson && packageJson.name && packageJson.name.indexOf('node') !== -1) {
-                isTypescript ? extendRules.push(extendList.ts_node) : extendRules.push(extendList.node);
+                isTypescript
+                    ? extendRules.push(extendList.ts_node)
+                    : extendRules.push(extendList.node);
             }
 
             if (extendRules.length === 0) {
-                isTypescript ? extendRules.push(extendList.ts_base) : extendRules.push(extendList.base);
+                isTypescript
+                    ? extendRules.push(extendList.ts_base)
+                    : extendRules.push(extendList.base);
             }
 
             // const config = { extends: [depend, diffPluginExtends] };
             config = { extends: [...extendRules] };
             // 高版本 eslint 添加 diff 拓展
-            !isEslintVersionLower(currentEslintVersion, '6.7.0') && config.extends.push(diffPluginExtends);
+            !isEslintVersionLower(currentEslintVersion, '6.7.0') &&
+                config.extends.push(diffPluginExtends);
             extendRules.forEach((rule) => (packageJson.devDependencies[rule] = 'latest'));
         }
         config.rules = {
@@ -233,9 +232,9 @@ function addDiffPluginToExtends(config) {
         }
     } else {
         // 如果没有找到 extends 行，创建一个新 extends 行
-        const moduleExportsIndex = lines.findIndex(line => line.includes('module.exports'));
+        const moduleExportsIndex = lines.findIndex((line) => line.includes('module.exports'));
         if (moduleExportsIndex !== -1) {
-            lines.splice(moduleExportsIndex + 1, 0, '    extends: [\'plugin:diff/diff\'],');
+            lines.splice(moduleExportsIndex + 1, 0, "    extends: ['plugin:diff/diff'],");
         }
     }
 
@@ -246,7 +245,14 @@ function addDiffPluginToExtends(config) {
  * 检测当前项目是否含有 eslint 配置文件，如果没有返回空字符串，如果有则返回文件地址
  */
 function hasESLintConfigFile() {
-    const filePaths = ['eslint.config.js', '.eslintrc.js', '.eslintrc.cjs', '.eslintrc.yaml', '.eslintrc.yml', '.eslintrc.json'];
+    const filePaths = [
+        'eslint.config.js',
+        '.eslintrc.js',
+        '.eslintrc.cjs',
+        '.eslintrc.yaml',
+        '.eslintrc.yml',
+        '.eslintrc.json',
+    ];
     let configFilePath = '';
 
     for (const file of filePaths) {
@@ -288,42 +294,50 @@ function handleEslintIgnoreFile() {
 }
 
 /**
- * 处理 husky 相关依赖及配置
+ * 处理 husky 相关依赖及配置，强制替换项目中版本为 ^3.0.5
  */
 function handleHuskyDependency() {
-    const hasHusky = packageJson.devDependencies.husky || packageJson.dependencies.husky;
-    if (!hasHusky) {
+    if (packageJson.dependencies.husky) {
+        packageJson.dependencies.husky = '^3.0.5';
+    } else {
         packageJson.devDependencies.husky = '^3.0.5';
-        // 有则替换 prepare 命令，无则添加
-        // prepare 钩子会在 npm install 前执行
-        // packageJson.scripts = packageJson.scripts || {};
-        // packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
-
-        // packageJson.husky = {
-        //     hooks: {
-        //         'pre-commit': 'lint-staged',
-        //     },
-        // };
-        packageJsonChanged = true;
     }
+    // 有则替换 prepare 命令，无则添加
+    // prepare 钩子会在 npm install 前执行
+    // packageJson.scripts = packageJson.scripts || {};
+    // packageJson.scripts.prepare = "npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'";
+
+    packageJson.husky = {
+        hooks: {
+            'pre-commit': 'lint-staged',
+        },
+    };
+    packageJsonChanged = true;
     // 执行完 npm install 后再执行创建配置
     // createHuskyConfig();
 }
 
+// 高版本 husky 需要创建 .husky 文件夹，但目前 husky 全部替换为低版本，所以这个函数不再需要使用
 function createHuskyConfig() {
-    const huskyFolder = './.husky';
+    const huskyFolder = path.resolve(process.cwd(), '.husky');
+    // const huskyFolder = './.husky';
     // 检查是否存在.husky文件夹
     if (!fs.existsSync(huskyFolder)) {
         // 如果不存在，执行创建命令
         console.log('正在创建 husky 配置文件，请等待');
         // 执行 npm install 来安装新的依赖
-        exec("npx husky install && npx husky add .husky/pre-commit 'npx lint-staged'", (error) => {
-            if (error) {
-                console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
-            } else {
-                console.log('husky 配置文件创建成功');
-            }
-        });
+        // process.chdir(process.cwd());
+        exec(
+            `npx husky install && npx husky add ${huskyFolder}/pre-commit 'npx lint-staged'`,
+            { stdio: 'inherit' },
+            (error) => {
+                if (error) {
+                    console.error(`\x1b[31mError executing npm install: ${error}\x1b[0m`);
+                } else {
+                    console.log('husky 配置文件创建成功');
+                }
+            },
+        );
     } else {
         console.log('.husky文件夹已存在');
     }
@@ -333,26 +347,28 @@ function createHuskyConfig() {
  * 处理 lint-staged 相关依赖及配置
  */
 function handleLintStagedDependency() {
-    const hasLintStaged = packageJson.devDependencies['lint-staged'] || packageJson.dependencies['lint-staged'];
+    const hasLintStaged =
+        packageJson.devDependencies['lint-staged'] || packageJson.dependencies['lint-staged'];
     if (!hasLintStaged) {
         packageJson.devDependencies['lint-staged'] = '^9.2.5';
         packageJsonChanged = true;
     }
 
-    if (!packageJson['lint-staged']) {
-        packageJson['lint-staged'] = {
-            // 'src/**/*.{js,jsx}': ['eslint'],
-            // 'source/**/*.{js,jsx}': ['eslint'],
-            '*.{js,jsx}': ['eslint'],
-        };
-    }
+    // 替换项目 package.json 中 lint-staged 的配置
+    // 这里主要是考虑到有些项目里可能会有 fix，导致不合规代码直接被修改，出现问题
+    packageJson['lint-staged'] = {
+        // 'src/**/*.{js,jsx}': ['eslint'],
+        // 'source/**/*.{js,jsx}': ['eslint'],
+        '*.{js,jsx,ts,tsx}': ['eslint'],
+    };
 }
 
 /**
  * 处理 eslint-plugin-diff 相关依赖及配置
  */
 function handleEslintPluginDiffDependency() {
-    const currentEslintVersion = packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
+    const currentEslintVersion =
+        packageJson.devDependencies.eslint || packageJson.dependencies.eslint;
     // nanachi 或者 eslint 版本较低时都不使用 diff，不支持，nanachi 本质也是因为 eslint 版本较低
     if (isNanachi) return;
     if (isEslintVersionLower(currentEslintVersion, '6.7.0')) return;
@@ -375,7 +391,7 @@ function handleNanachiDependency() {
 }
 
 /**
- * 判断当前根目录中是否存在 gitIgnore 文件，不存在则创建
+ * 判断当前根目录中是否存在 gitIgnore 文件，不存在则创建，已废弃，现在不再需要使用
  */
 function handleGitIgnoreFile() {
     const currentDirectory = process.cwd();
@@ -396,6 +412,20 @@ function handleGitIgnoreFile() {
             fs.appendFileSync(gitIgnorePath, `\n${currentFileName}`);
         }
     }
+}
+
+/**
+ * 修改 .git 文件夹的 config 配置文件，让 git hook 都走本地的 hooks，这里正常情况下是不用配置的，
+ * 但是为了适配比如云开发环境可能配置了全局 hooksPath，这就会导致不走本地的 hooks，然后 pre-commit 就不会触发
+ */
+function handleGitConfigFile() {
+    exec('git config --local core.hooksPath .git/hooks', (error) => {
+        if (error) {
+            console.error(`\x1b[31m配置本地 core.hooksPath 失败: ${error}\x1b[0m`);
+        } else {
+            console.log('配置本地 core.hooksPath 成功');
+        }
+    });
 }
 
 /**

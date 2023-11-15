@@ -8,3 +8,6 @@ build
 packages/*/lib
 .eslintrc.js
 add.js
+
+index.js
+addEslint.js
